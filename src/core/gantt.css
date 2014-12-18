@@ -36,6 +36,31 @@
     overflow: hidden;
 }
 
+.gantt-row-label {
+    overflow: hidden;
+    white-space: nowrap;
+}
+
+.gantt-side-background {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+}
+
+.gantt-side-content {
+    position: relative;
+    overflow: hidden;
+}
+
+.gantt-side-content > div.side-element {
+    float: left;
+    overflow: hidden;
+}
+
+.gantt-side-content > div.side-element:last-child {
+    float: none;
+}
+
 .gantt-header-columns {
     position: relative;
     height: 100%;

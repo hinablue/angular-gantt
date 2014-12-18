@@ -119,7 +119,7 @@ Github: https://github.com/angular-gantt/angular-gantt.git
 
 (function(){
     'use strict';
-    angular.module('gantt.labels', ['gantt', 'gantt.labels.templates']).directive('ganttLabels', ['ganttUtils', '$compile', '$document', function(utils, $compile, $document) {
+    angular.module('gantt.labels', ['gantt', 'gantt.labels.templates']).directive('ganttLabels', ['ganttUtils', '$compile', '$document', '$log', function(utils, $compile, $document, $log) {
         // Provides the row sort functionality to any Gantt row
         // Uses the sortableState to share the current row
 
@@ -132,6 +132,8 @@ Github: https://github.com/angular-gantt/angular-gantt.git
             },
             link: function(scope, element, attrs, ganttCtrl) {
                 var api = ganttCtrl.gantt.api;
+
+                $log.warn('Angular Gantt Labels plugin is deprecated. Please use Table plugin instead.');
 
                 // Load options from global options attribute.
                 if (scope.options && typeof(scope.options.sortable) === 'object') {
@@ -155,6 +157,7 @@ Github: https://github.com/angular-gantt/angular-gantt.git
 
                         var ifElement = $document[0].createElement('div');
                         angular.element(ifElement).attr('data-ng-if', 'pluginScope.enabled');
+                        angular.element(ifElement).addClass('side-element');
 
                         var labelsElement = $document[0].createElement('gantt-side-content-labels');
                         angular.element(ifElement).append(labelsElement);
@@ -807,6 +810,70 @@ Github: https://github.com/angular-gantt/angular-gantt.git
 
 (function(){
     'use strict';
+    angular.module('gantt.table', ['gantt', 'gantt.table.templates']).directive('ganttTable', ['ganttUtils', '$compile', '$document', function(utils, $compile, $document) {
+        // Provides the row sort functionality to any Gantt row
+        // Uses the sortableState to share the current row
+
+        return {
+            restrict: 'E',
+            require: '^gantt',
+            scope: {
+                enabled: '=?',
+                columns: '=',
+                headers: '=?',
+                formatters: '=?',
+                headerFormatter: '=?'
+            },
+            link: function(scope, element, attrs, ganttCtrl) {
+                var api = ganttCtrl.gantt.api;
+
+                // Load options from global options attribute.
+                if (scope.options && typeof(scope.options.sortable) === 'object') {
+                    for (var option in scope.options.sortable) {
+                        scope[option] = scope.options[option];
+                    }
+                }
+
+                if (scope.enabled === undefined) {
+                    scope.enabled = true;
+                }
+
+                if (scope.columns === undefined) {
+                    scope.columns = ['model.name'];
+                }
+
+                if (scope.headers === undefined) {
+                    scope.headers = {'model.name': 'Name'};
+                }
+
+                if (scope.formatters === undefined) {
+                    scope.formatters = {};
+                }
+
+                api.directives.on.new(scope, function(directiveName, sideContentScope, sideContentElement) {
+                    if (directiveName === 'ganttSideContent') {
+                        var tableScope = sideContentScope.$new();
+                        tableScope.pluginScope = scope;
+
+                        var ifElement = $document[0].createElement('div');
+                        angular.element(ifElement).attr('data-ng-if', 'pluginScope.enabled');
+                        angular.element(ifElement).addClass('side-element');
+
+                        var tableElement = $document[0].createElement('gantt-side-content-table');
+                        angular.element(ifElement).append(tableElement);
+
+                        sideContentElement.append($compile(ifElement)(tableScope));
+                    }
+                });
+
+            }
+        };
+    }]);
+}());
+
+
+(function(){
+    'use strict';
     angular.module('gantt.tooltips', ['gantt', 'gantt.tooltips.templates']).directive('ganttTooltips', ['$compile', '$document', function($compile, $document) {
         return {
             restrict: 'E',
@@ -962,17 +1029,6 @@ Github: https://github.com/angular-gantt/angular-gantt.git
 
 (function(){
     'use strict';
-    angular.module('gantt.labels').directive('ganttRowLabel', ['GanttDirectiveBuilder', function(Builder) {
-        var builder = new Builder('ganttRowLabel');
-        builder.restrict = 'A';
-        builder.templateUrl = undefined;
-        return builder.build();
-    }]);
-}());
-
-
-(function(){
-    'use strict';
     angular.module('gantt.labels').directive('ganttSideContentLabels', ['GanttDirectiveBuilder', function(Builder) {
         var builder = new Builder('ganttSideContentLabels', 'plugins/labels/sideContentLabels.tmpl.html');
         return builder.build();
@@ -1059,6 +1115,47 @@ Github: https://github.com/angular-gantt/angular-gantt.git
                     $scope.task.rowsManager.gantt.api.directives.raise.destroy('ganttTaskProgress', $scope, $element);
                 });
             }]
+        };
+    }]);
+}());
+
+
+(function(){
+    'use strict';
+    angular.module('gantt.table').directive('ganttSideContentTable', ['GanttDirectiveBuilder', function(Builder) {
+        var builder = new Builder('ganttSideContentTable', 'plugins/table/sideContentTable.tmpl.html');
+        return builder.build();
+    }]);
+}());
+
+
+(function() {
+    'use strict';
+    angular.module('gantt.table').controller('TableController', ['$scope', function($scope) {
+        $scope.getValue = function(scope, column) {
+            var value = scope.$eval('row.' + column);
+
+            var formatter = $scope.pluginScope.formatters[column];
+            if (formatter !== undefined) {
+                value = formatter(value, column, scope.row);
+            }
+
+            return value;
+        };
+
+        $scope.getHeader = function(scope, column) {
+            var header = $scope.pluginScope.headers[column];
+            if (header !== undefined) {
+                return header;
+            }
+            var headerFormatter;
+            if ($scope.pluginScope.headerFormatter !== undefined) {
+                header = headerFormatter(column);
+            }
+            if (header !== undefined) {
+                return header;
+            }
+            return header;
         };
     }]);
 }());
@@ -1276,10 +1373,8 @@ angular.module('gantt.labels.templates', []).run(['$templateCache', function($te
         '        <div ng-repeat="row in gantt.rowsManager.visibleRows track by row.model.id">\n' +
         '            <div gantt-row-label\n' +
         '                 class="gantt-row-label gantt-row-height"\n' +
-        '                 ng-class-odd="\'gantt-background-row\'"\n' +
-        '                 ng-class-even="\'gantt-background-row-alt\'"\n' +
         '                 ng-class="row.model.classes"\n' +
-        '                 ng-style="{\'background-color\': row.model.color, \'height\': row.model.height}">\n' +
+        '                 ng-style="{\'height\': row.model.height}">\n' +
         '                <span>{{row.model.name}}</span>\n' +
         '            </div>\n' +
         '        </div>\n' +
@@ -1317,6 +1412,34 @@ angular.module('gantt.progress.templates', []).run(['$templateCache', function($
 
 angular.module('gantt.sortable.templates', []).run(['$templateCache', function($templateCache) {
 
+}]);
+
+angular.module('gantt.table.templates', []).run(['$templateCache', function($templateCache) {
+    $templateCache.put('plugins/table/sideContentTable.tmpl.html',
+        '<div class="gantt-side-content-table" ng-controller="TableController">\n' +
+        '    <table ng-show="gantt.columnsManager.columns.length > 0 && gantt.columnsManager.headers.length > 0" class="gantt-table">\n' +
+        '        <thead>\n' +
+        '            <tr class="gantt-table-row" ng-repeat="header in gantt.columnsManager.headers">\n' +
+        '                <th class="gantt-table-column" ng-repeat="column in pluginScope.columns">\n' +
+        '                    <div class="gantt-row-height gantt-table-cell" ng-class="{\'gantt-labels-header-row\': $parent.$last, \'gantt-labels-header-row-last\': $parent.$last}"><span>{{$parent.$last ? getHeader(this, column) : ""}}</span></div>\n' +
+        '                </th>\n' +
+        '            </tr>\n' +
+        '        </thead>\n' +
+        '        <tbody gantt-vertical-scroll-receiver>\n' +
+        '            <tr class="gantt-table-row" ng-repeat="row in gantt.rowsManager.visibleRows track by row.model.id">\n' +
+        '                <td class="gantt-table-column" ng-repeat="column in pluginScope.columns">\n' +
+        '                    <div gantt-row-label\n' +
+        '                         class="gantt-row-label gantt-row-height"\n' +
+        '                         ng-class="row.model.classes"\n' +
+        '                         ng-style="{\'height\': row.model.height}">\n' +
+        '                        <span>{{getValue($parent, column)}}</span>\n' +
+        '                    </div>\n' +
+        '                </td>\n' +
+        '            </tr>\n' +
+        '        </tbody>\n' +
+        '    </table>\n' +
+        '</div>\n' +
+        '');
 }]);
 
 angular.module('gantt.tooltips.templates', []).run(['$templateCache', function($templateCache) {
@@ -1367,20 +1490,24 @@ angular.module('gantt.tree.templates', []).run(['$templateCache', function($temp
     $templateCache.put('plugins/tree/treeBodyChildren.tmpl.html',
         '<div ui-tree-handle\n' +
         '     ng-controller="GanttTreeChildrenController"\n' +
-        '     class="gantt-row-label gantt-row-height"\n' +
+        '     class="gantt-row-label gantt-row-height" ,\n' +
+        '     ng-class="row.model.classes"\n' +
         '     ng-style="{\'height\': row.model.height}">\n' +
         '    <div class="valign-container">\n' +
         '        <div class="valign-content">\n' +
-        '            <a data-nodrag class="btn btn-xs" ng-click="toggle(this)">\n' +
-        '                                    <span class="gantt-tree-handle glyphicon glyphicon-chevron-down"\n' +
-        '                                          ng-class="{\'glyphicon-chevron-right\': collapsed, \'glyphicon-chevron-down\': !collapsed}"></span>\n' +
+        '            <a ng-disabled="!childrenRows || childrenRows.length === 0" data-nodrag class="btn btn-xs" ng-click="toggle(this)"><span\n' +
+        '                class="gantt-tree-handle glyphicon glyphicon-chevron-down"\n' +
+        '                ng-class="{\n' +
+        '                \'glyphicon-chevron-right\': collapsed, \'glyphicon-chevron-down\': !collapsed,\n' +
+        '                \'gantt-tree-collapsed\': collapsed, \'gantt-tree-expanded\': !collapsed}"></span>\n' +
         '            </a>\n' +
         '            <span>{{row.model.name}}</span>\n' +
         '        </div>\n' +
         '    </div>\n' +
         '</div>\n' +
         '<ol ui-tree-nodes ng-class="{hidden: collapsed}" ng-model="childrenRows">\n' +
-        '    <li ng-repeat="row in childrenRows track by row.model.id" ui-tree-node ng-include="\'plugins/tree/treeBodyChildren.tmpl.html\'">\n' +
+        '    <li ng-repeat="row in childrenRows track by row.model.id" ui-tree-node\n' +
+        '        ng-include="\'plugins/tree/treeBodyChildren.tmpl.html\'">\n' +
         '    </li>\n' +
         '</ol>\n' +
         '');

@@ -18,6 +18,16 @@ angular.module('angularGanttDemoApp')
             sortMode: undefined,
             maxHeight: false,
             width: false,
+            columns: ['model.name', 'from', 'to'],
+            columnsHeaders: {'model.name' : 'Name', 'from': 'From', 'to': 'To'},
+            columnsFormatters: {
+                'from': function(from) {
+                    return from.format('lll');
+                },
+                'to': function(to) {
+                    return to.format('lll');
+                }
+            },
             autoExpand: 'none',
             taskOutOfRange: 'truncate',
             fromDate: undefined,

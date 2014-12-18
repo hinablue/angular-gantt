@@ -16,7 +16,7 @@ angular.module('angularGanttDemoApp', [
     'gantt.tooltips',
     'gantt.bounds',
     'gantt.progress',
-    'gantt.labels',
+    'gantt.table',
     'mgcrea.ngStrap'
 ]).config(['$compileProvider', function($compileProvider) {
     $compileProvider.debugInfoEnabled(true); // Remove debug info (angularJS >= 1.3)
@@ -42,6 +42,16 @@ angular.module('angularGanttDemoApp')
             sortMode: undefined,
             maxHeight: false,
             width: false,
+            columns: ['model.name', 'from', 'to'],
+            columnsHeaders: {'model.name' : 'Name', 'from': 'From', 'to': 'To'},
+            columnsFormatters: {
+                'from': function(from) {
+                    return from.format('lll');
+                },
+                'to': function(to) {
+                    return to.format('lll');
+                }
+            },
             autoExpand: 'none',
             taskOutOfRange: 'truncate',
             fromDate: undefined,

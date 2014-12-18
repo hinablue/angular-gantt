@@ -30,11 +30,6 @@
     padding-right: 12px;
 }
 
-.gantt-row-label {
-    overflow: hidden;
-    white-space: nowrap;
-}
-
 .gantt-labels-header {
     overflow: hidden;
 }
@@ -69,6 +64,12 @@
     bottom: 0px;
     height: 6px;
     border-radius: 2px;
+}
+
+table.gantt-table {
+    background-color: transparent;
+    border-spacing: 0;
+    border-collapse: collapse;
 }
 
 .gantt-task-info {
